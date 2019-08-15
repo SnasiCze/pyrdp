@@ -221,7 +221,7 @@ class RDPVersion(IntEnum):
     RDP10_5 = 0x8000A
     RDP10_6 = 0x8000B
     RDP10_7 = 0x8000C
-
+    RDP10_8 = 0x8000D
 
 class ColorDepth(IntEnum):
     RNS_UD_COLOR_4BPP = 0xCA00
