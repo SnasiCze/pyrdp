@@ -4,9 +4,8 @@
 # Licensed under the GPLv3 or later.
 #
 
-from typing import Dict
-
-from PySide2.QtWidgets import QWidget
+from PySide2.QtGui import QKeySequence
+from PySide2.QtWidgets import QShortcut, QWidget
 
 from pyrdp.player.BaseWindow import BaseWindow
 from pyrdp.player.ReplayTab import ReplayTab
@@ -17,8 +16,9 @@ class ReplayWindow(BaseWindow):
     Class for managing replay tabs.
     """
 
-    def __init__(self, options: Dict[str, object], parent: QWidget = None):
-        super().__init__(options, parent)
+    def __init__(self, parent: QWidget = None):
+        super().__init__(parent)
+        self.closeTabShortcut = QShortcut(QKeySequence("Ctrl+W"), self, self.closeCurrentTab)
 
     def openFile(self, fileName: str):
         """
@@ -28,3 +28,7 @@ class ReplayWindow(BaseWindow):
         tab = ReplayTab(fileName)
         self.addTab(tab, fileName)
         self.log.debug("Loading replay file %(arg1)s", {"arg1": fileName})
+
+    def closeCurrentTab(self):
+        if self.count() > 0:
+            self.onTabClosed(self.currentIndex())

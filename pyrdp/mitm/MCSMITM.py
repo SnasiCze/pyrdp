@@ -10,7 +10,6 @@ from typing import Callable, Dict
 from pyrdp.enum import ClientCapabilityFlag, EncryptionLevel, EncryptionMethod, HighColorDepth, MCSChannelName, \
     PlayerPDUType, SupportedColorDepth
 from pyrdp.layer import MCSLayer
-from pyrdp.logging.StatCounter import StatCounter, STAT
 from pyrdp.mcs import MCSClientChannel, MCSServerChannel
 from pyrdp.mitm.state import RDPMITMState
 from pyrdp.parser import ClientConnectionParser, GCCParser, ServerConnectionParser
@@ -30,8 +29,7 @@ class MCSMITM:
     """
 
     def __init__(self, client: MCSLayer, server: MCSLayer, state: RDPMITMState, recorder: Recorder,
-                 buildChannelCallback: Callable[[MCSServerChannel, MCSClientChannel], None],
-                 log: LoggerAdapter, statCounter: StatCounter):
+                buildChannelCallback: Callable[[MCSServerChannel, MCSClientChannel], None], log: LoggerAdapter):
         """
         :param client: MCS layer for the client side
         :param server: MCS layer for the server side
@@ -42,7 +40,6 @@ class MCSMITM:
         """
 
         self.log = log
-        self.statCounter = statCounter
         self.client = client
         self.server = server
         self.state = state
@@ -154,9 +151,7 @@ class MCSMITM:
 
             for index in range(len(serverData.networkData.channels)):
                 channelID = serverData.networkData.channels[index]
-                name = self.state.channelDefinitions[index].name
-                self.log.info("%(channelName)s <---> Channel #%(channelId)d", {"channelName": name, "channelId": channelID})
-                self.state.channelMap[channelID] = name
+                self.state.channelMap[channelID] = self.state.channelDefinitions[index].name
 
             # Replace the server's public key with our own key so we can decrypt the incoming client random
             cert = serverData.securityData.serverCertificate
@@ -187,6 +182,7 @@ class MCSMITM:
             modifiedMCSPDU = MCSConnectResponsePDU(pdu.result, pdu.calledConnectID, pdu.domainParams, gccParser.write(modifiedGCCPDU))
 
             self.client.sendPDU(modifiedMCSPDU)
+
 
     def onErectDomainRequest(self, pdu: MCSErectDomainRequestPDU):
         """
@@ -237,10 +233,7 @@ class MCSMITM:
         :param pdu: the send data request
         """
 
-        self.statCounter.increment(STAT.MCS, STAT.MCS_INPUT)
-
         if pdu.channelID in self.serverChannels:
-            self.statCounter.increment(STAT.MCS_INPUT_ + str(pdu.channelID))
             self.clientChannels[pdu.channelID].recv(pdu.payload)
 
     def onSendDataIndication(self, pdu: MCSSendDataIndicationPDU):
@@ -249,10 +242,7 @@ class MCSMITM:
         :param pdu: the send data indication
         """
 
-        self.statCounter.increment(STAT.MCS, STAT.MCS_OUTPUT)
-
         if pdu.channelID in self.clientChannels:
-            self.statCounter.increment(STAT.MCS_OUTPUT_ + str(pdu.channelID))
             self.serverChannels[pdu.channelID].recv(pdu.payload)
 
     def onClientDisconnectProviderUltimatum(self, pdu: MCSDisconnectProviderUltimatumPDU):

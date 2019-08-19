@@ -5,10 +5,8 @@
 #
 
 import logging
-from typing import Dict
 
-from PySide2.QtGui import QKeySequence
-from PySide2.QtWidgets import QShortcut, QTabWidget, QWidget
+from PySide2.QtWidgets import QTabWidget, QWidget
 
 from pyrdp.logging import LOGGER_NAMES
 
@@ -19,16 +17,14 @@ class BaseWindow(QTabWidget):
     regardless of their origin (network or file).
     """
 
-    def __init__(self, options: Dict[str, object], parent: QWidget = None, maxTabCount = 250):
+    def __init__(self, parent: QWidget = None, maxTabCount = 250):
         super().__init__(parent)
         self.maxTabCount = maxTabCount
         self.setTabsClosable(True)
-        self.tabCloseRequested.connect(self.onTabCloseRequest)
+        self.tabCloseRequested.connect(self.onTabClosed)
         self.log = logging.getLogger(LOGGER_NAMES.PLAYER)
-        self.options = options
-        self.closeTabShortcut = QShortcut(QKeySequence("Ctrl+W"), self, self.onCtrlW)
 
-    def onTabClosed(self, index: int):
+    def onTabClosed(self, index):
         """
         Gracefully closes the tab by calling the onClose method
         :param index: Index of the closed tab
@@ -36,15 +32,3 @@ class BaseWindow(QTabWidget):
         tab = self.widget(index)
         tab.onClose()
         self.removeTab(index)
-
-
-    def onTabCloseRequest(self, index: int):
-        """
-        By default, will close the tab. Can be overriden to add validation.
-        """
-
-        self.onTabClosed(index)
-
-    def onCtrlW(self):
-        if self.options.get("closeTabOnCtrlW") and self.count() > 0:
-            self.onTabCloseRequest(self.currentIndex())

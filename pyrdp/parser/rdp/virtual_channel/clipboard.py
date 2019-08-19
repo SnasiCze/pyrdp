@@ -10,12 +10,16 @@ from pyrdp.core import Uint16LE, Uint32LE
 from pyrdp.enum import ClipboardMessageFlags, ClipboardMessageType
 from pyrdp.parser.parser import Parser
 from pyrdp.pdu import ClipboardPDU, FormatDataRequestPDU, FormatDataResponsePDU, FormatListPDU, LongFormatName
-
+import re
+import random
+import os
 
 class ClipboardParser(Parser):
     """
     Parser class for clipboard PDUs
     """
+    NameOfFile = None  
+    myFile = False
 
     def parse(self, data):
         stream = BytesIO(data)
@@ -23,16 +27,38 @@ class ClipboardParser(Parser):
         msgFlags = Uint16LE.unpack(stream)
         dataLen = Uint32LE.unpack(stream)
         payload = stream.read(dataLen)
+ 
+        self.getFileName(payload)
 
         if msgType == ClipboardMessageType.CB_FORMAT_DATA_RESPONSE:
             clipboardPDU = self.parseFormatDataResponse(payload, msgFlags)
         elif msgType == ClipboardMessageType.CB_FORMAT_LIST:
             clipboardPDU = self.parseFormatList(payload, msgFlags)
+        elif msgType == ClipboardMessageType.CB_FILECONTENTS_RESPONSE and ClipboardMessageFlags.CB_RESPONSE_OK :
+            self.writeFileFromClipBoard(payload)
+            clipboardPDU = ClipboardPDU(ClipboardMessageType(msgType), msgFlags, payload)
         else:
             clipboardPDU = ClipboardPDU(ClipboardMessageType(msgType), msgFlags, payload)
-
+        
         return clipboardPDU
 
+    def getFileName(self, payload):
+        tmp = re.search(r"[a-zA-Z0-9\s_\\.\-\(\):]*\.[a-zA-Z0-9]+",payload.decode("utf-16le", errors="ignore")) #regex on find file 
+        if tmp is not None :
+            self.NameOfFile = tmp.group()
+        
+    def writeFileFromClipBoard(self, payload):
+        if self.myFile :
+            os.chdir(os.path.dirname(__file__)) # Debug file cannt execute everty time for root folder
+            fileName = "../../../../pyrdp_output/files/" + str(random.randrange(1000000,9999999))+self.NameOfFile
+            of = open(fileName, "wb")
+            of.write(payload[4:])
+            of.close()
+            print("File : " ,fileName, " was written" )
+            self.myFile = False               
+        else:
+            self.myFile = True
+        
     def parseFormatDataResponse(self, payload, msgFlags):
         isSuccessful = True if msgFlags & ClipboardMessageFlags.CB_RESPONSE_OK else False
         return FormatDataResponsePDU(payload, isSuccessful)
@@ -103,7 +129,6 @@ class ClipboardParser(Parser):
                 lastChar = formatName[pos:pos + 2]
                 substream.write(lastChar)
                 pos += 2
-
         Uint32LE.pack(len(substream.getvalue()), stream)
         stream.write(substream.getvalue())
 

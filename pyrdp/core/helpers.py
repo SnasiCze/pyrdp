@@ -9,6 +9,8 @@ File that contains helper methods to use in the library.
 """
 import logging
 from logging import Logger
+import io
+import re
 
 
 def decodeUTF16LE(data: bytes) -> str:

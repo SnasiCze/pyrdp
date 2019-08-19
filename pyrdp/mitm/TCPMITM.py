@@ -8,7 +8,6 @@ from logging import LoggerAdapter
 from typing import Coroutine
 
 from pyrdp.layer import TwistedTCPLayer
-from pyrdp.logging.StatCounter import StatCounter
 from pyrdp.mitm.state import RDPMITMState
 from pyrdp.pdu.player import PlayerConnectionClosePDU
 from pyrdp.recording import Recorder
@@ -19,8 +18,7 @@ class TCPMITM:
     MITM component for the TCP layer.
     """
 
-    def __init__(self, client: TwistedTCPLayer, server: TwistedTCPLayer, attacker: TwistedTCPLayer, log: LoggerAdapter,
-                 state: RDPMITMState, recorder: Recorder, serverConnector: Coroutine, statCounter: StatCounter):
+    def __init__(self, client: TwistedTCPLayer, server: TwistedTCPLayer, attacker: TwistedTCPLayer, log: LoggerAdapter, state: RDPMITMState, recorder: Recorder, serverConnector: Coroutine):
         """
         :param client: TCP layer for the client side
         :param server: TCP layer for the server side
@@ -30,8 +28,8 @@ class TCPMITM:
         :param serverConnector: coroutine that connects to the server side, closed when the client disconnects
         """
 
-        self.statCounter = statCounter
-        # To keep track of useful statistics for the connection.
+        self.connectionTime = 0
+        # To keep track of the duration of the TCP connection.
 
         self.client = client
         self.server = server
@@ -40,10 +38,6 @@ class TCPMITM:
         self.state = state
         self.recorder = recorder
         self.serverConnector = serverConnector
-
-        # Allows a lower layer to raise error tagged with the correct sessionID
-        self.client.log = log
-        self.server.log = log
 
         self.clientObserver = self.client.createObserver(
             onConnection = self.onClientConnection,
@@ -72,11 +66,7 @@ class TCPMITM:
         """
         Log the fact that a new client has connected.
         """
-        
-        # Statistics
-        self.statCounter.start()        
         self.connectionTime = time.time()
-
         ip = self.client.transport.client[0]
         self.log.info("New client connected from %(clientIp)s", {"clientIp": ip})
 
@@ -86,10 +76,11 @@ class TCPMITM:
         :param reason: reason for disconnection
         """
 
-        self.statCounter.stop()
+        self.connectionTime = time.time() - self.connectionTime
+
         self.recordConnectionClose()
         self.log.info("Client connection closed. %(reason)s", {"reason": reason.value})
-        self.statCounter.logReport(self.log)
+        self.log.info("Client connection time: %(connectionTime)s secs", {"connectionTime": self.connectionTime})
         self.serverConnector.close()
         self.server.disconnect(True)
 
