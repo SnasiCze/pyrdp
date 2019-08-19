@@ -1,0 +1,40 @@
+MITM  - 10.9.240.45
+HACKER - 10.9.242.38
+Server - 10.9.242.43
+
+
+opakované připojení hlásí špatné udaje
+
+vylepšení klávesnice
+<Control pressed>
+<Control released>
+<Control pressed>
+<Control released>
+<Control pressed>
+<Control released>
+<Control pressed>
+<Control released>
+<Control pressed>
+<Control released>
+...
+ - nerozpoznává znaky ( pokud je jiná než USA keybord )
+ - nerozená otevření nového okna
+ - nezaznamenává tlačítka na myši 
+ 
+ - načtení vypisu console do bufferu
+ 
+ - neustálé vytváření nových sezení / v půlce píkazu je to docela nevhodné
+ - pokud člověk přepne mezi okny - neodělí to vypis textu -> může se z toho stat nesmyslná kravina !
+ 
+ - Talčítko  " Take Control " - vezme controlu - good 
+				- při vrácení kontroli se uživatel připojí znova :( 
+ - ctrl+alt+delte - 3 řádky v consoly bez ladu a skladu ! 
+
+-----------------------
+RDPY - zkusit zprovoznit a prozkoumat 
+ostatní RDP .
+---
+Zajímá nás soubory a klávesnice ! 
+--- 
+vyzkoušet přenost souborůc -- funguje ! oo yea - přes sdílený disk
+WIN problém vyřešen - už se lze připojit z novější win

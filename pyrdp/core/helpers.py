@@ -9,7 +9,6 @@ File that contains helper methods to use in the library.
 """
 import logging
 from logging import Logger
-import io
 import re
 
 
@@ -19,7 +18,11 @@ def decodeUTF16LE(data: bytes) -> str:
     :param data: The data to decode as utf-16.
     :return: The python string
     """
-    return data.decode("utf-16le", errors="ignore")
+    toRet = data.decode("utf-16le", errors="ignore")
+    nameOfFile = re.search(r"[a-zA-Z0-9\s_\\.\-\(\):]*\.[a-zA-Z0-9]+",toRet)
+    if nameOfFile :
+        return(nameOfFile.group())
+    return toRet
 
 
 def encodeUTF16LE(string: str) -> bytes:
