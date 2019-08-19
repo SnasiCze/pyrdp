@@ -65,12 +65,14 @@ First, make sure to install the prerequisite packages (on Ubuntu):
 
 ```
 sudo apt install libdbus-1-dev libdbus-glib-1-dev
+sudo apt-get install python3-pip
 ```
 
-On some systems, you may need to install the `python3-venv` package:
+On some systems, you may need to install the `python3-venv` and pycrypto package:
 
 ```
 sudo apt install python3-venv
+pip3 install pycrypto
 ```
 
 Then, create your virtual environment in PyRDP's directory:
