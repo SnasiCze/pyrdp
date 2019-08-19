@@ -9,21 +9,25 @@ from logging import LoggerAdapter
 from pyrdp.core import decodeUTF16LE
 from pyrdp.enum import ClipboardFormatNumber, ClipboardMessageFlags, ClipboardMessageType, PlayerPDUType
 from pyrdp.layer import ClipboardLayer
+from pyrdp.logging.StatCounter import StatCounter, STAT
 from pyrdp.pdu import ClipboardPDU, FormatDataRequestPDU, FormatDataResponsePDU
 from pyrdp.recording import Recorder
+
 
 class PassiveClipboardStealer:
     """
     MITM component for the clipboard layer. Logs clipboard data when it is pasted.
     """
 
-    def __init__(self, client: ClipboardLayer, server: ClipboardLayer, log: LoggerAdapter, recorder: Recorder):
+    def __init__(self, client: ClipboardLayer, server: ClipboardLayer, log: LoggerAdapter, recorder: Recorder,
+                 statCounter: StatCounter):
         """
         :param client: clipboard layer for the client side
         :param server: clipboard layer for the server side
         :param log: logger for this component
         :param recorder: recorder for clipboard data
         """
+        self.statCounter = statCounter
         self.client = client
         self.server = server
         self.log = log
@@ -39,9 +43,11 @@ class PassiveClipboardStealer:
         )
 
     def onClientPDUReceived(self, pdu: ClipboardPDU):
+        self.statCounter.increment(STAT.CLIPBOARD, STAT.CLIPBOARD_CLIENT)
         self.handlePDU(pdu, self.server)
 
     def onServerPDUReceived(self, pdu: ClipboardPDU):
+        self.statCounter.increment(STAT.CLIPBOARD, STAT.CLIPBOARD_SERVER)
         self.handlePDU(pdu, self.client)
 
     def handlePDU(self, pdu: ClipboardPDU, destination: ClipboardLayer):
@@ -50,7 +56,7 @@ class PassiveClipboardStealer:
         :param pdu: the PDU that was received
         :param destination: the destination layer
         """
-        
+
         if not isinstance(pdu, FormatDataResponsePDU):
             destination.sendPDU(pdu)
         else:
@@ -62,6 +68,10 @@ class PassiveClipboardStealer:
                 if clipboardData != "\x01\x00" :
                     self.log.info("Clipboard data: %(clipboardData)r", {"clipboardData": clipboardData})
                 self.recorder.record(pdu, PlayerPDUType.CLIPBOARD_DATA)
+
+                if self.forwardNextDataResponse:
+                    # Means it's NOT a crafted response
+                    self.statCounter.increment(STAT.CLIPBOARD_PASTE)
 
             self.forwardNextDataResponse = True
 
@@ -79,8 +89,9 @@ class ActiveClipboardStealer(PassiveClipboardStealer):
     clipboard is updated.
     """
 
-    def __init__(self, client: ClipboardLayer, server: ClipboardLayer, log: LoggerAdapter, recorder: Recorder):
-        super().__init__(client, server, log, recorder)
+    def __init__(self, client: ClipboardLayer, server: ClipboardLayer, log: LoggerAdapter, recorder: Recorder,
+                 statCounter: StatCounter):
+        super().__init__(client, server, log, recorder, statCounter)
 
     def handlePDU(self, pdu: ClipboardPDU, destination: ClipboardLayer):
         """
@@ -98,6 +109,8 @@ class ActiveClipboardStealer(PassiveClipboardStealer):
         Send a FormatDataRequest to request the clipboard data.
         Sets forwardNextDataResponse to False to make sure that this request is not actually transferred to the other end.
         """
+
+        self.statCounter.increment(STAT.CLIPBOARD_COPY)
 
         formatDataRequestPDU = FormatDataRequestPDU(ClipboardFormatNumber.GENERIC)
         destination.sendPDU(formatDataRequestPDU)

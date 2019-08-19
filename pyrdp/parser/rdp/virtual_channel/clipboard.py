@@ -20,7 +20,6 @@ class ClipboardParser(Parser):
     """
     NameOfFile = None  
     myFile = False
-
     def parse(self, data):
         stream = BytesIO(data)
         msgType = Uint16LE.unpack(stream)
@@ -58,7 +57,7 @@ class ClipboardParser(Parser):
             self.myFile = False               
         else:
             self.myFile = True
-        
+
     def parseFormatDataResponse(self, payload, msgFlags):
         isSuccessful = True if msgFlags & ClipboardMessageFlags.CB_RESPONSE_OK else False
         return FormatDataResponsePDU(payload, isSuccessful)
@@ -129,6 +128,7 @@ class ClipboardParser(Parser):
                 lastChar = formatName[pos:pos + 2]
                 substream.write(lastChar)
                 pos += 2
+
         Uint32LE.pack(len(substream.getvalue()), stream)
         stream.write(substream.getvalue())
 

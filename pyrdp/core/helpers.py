@@ -11,7 +11,6 @@ import logging
 from logging import Logger
 import re
 
-
 def decodeUTF16LE(data: bytes) -> str:
     """
     Decode the provided bytes in UTF-16 in a way that does not crash when invalid input is provided.
