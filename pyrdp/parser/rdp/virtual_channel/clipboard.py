@@ -18,7 +18,7 @@ class ClipboardParser(Parser):
     """
     Parser class for clipboard PDUs
     """
-    NameOfFile = None  
+    NameOfFile = None
     myFile = False
     def parse(self, data):
         stream = BytesIO(data)
@@ -27,8 +27,8 @@ class ClipboardParser(Parser):
         dataLen = Uint32LE.unpack(stream)
         payload = stream.read(dataLen)
  
-        self.getFileName(payload)
-
+        if msgFlags == ClipboardMessageFlags.CB_RESPONSE_OK and msgType == ClipboardMessageType.CB_FORMAT_DATA_RESPONSE:
+            self.getFileName(payload)          
         if msgType == ClipboardMessageType.CB_FORMAT_DATA_RESPONSE:
             clipboardPDU = self.parseFormatDataResponse(payload, msgFlags)
         elif msgType == ClipboardMessageType.CB_FORMAT_LIST:
@@ -42,14 +42,14 @@ class ClipboardParser(Parser):
         return clipboardPDU
 
     def getFileName(self, payload):
-        tmp = re.search(r"[a-zA-Z0-9\s_\\.\-\(\):]*\.[a-zA-Z0-9]+",payload.decode("utf-16le", errors="ignore")) #regex on find file 
+        tmp = re.findall(r"\.*\w[a-zA-Z0-9_\\.\-\(\):]+",payload.decode("utf-16le", errors="ignore")) #regex on find file 
         if tmp is not None :
-            self.NameOfFile = tmp.group()
+            self.NameOfFile = tmp
         
     def writeFileFromClipBoard(self, payload):
         if self.myFile :
             os.chdir(os.path.dirname(__file__)) # Debug file cannt execute everty time for root folder
-            fileName = "../../../../pyrdp_output/files/" + str(random.randrange(1000000,9999999))+self.NameOfFile
+            fileName = "../../../../pyrdp_output/files/" + str(random.randrange(1000000,9999999))+self.NameOfFile.pop(0)
             of = open(fileName, "wb")
             of.write(payload[4:])
             of.close()
